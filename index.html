@@ -10,7 +10,135 @@
   <h1>rintu</h1>
   <p>Declarative agent built with TypeSpec for Microsoft 365 Copilot.</p>
   <h2>README</h2>
-  <pre style="white-space:pre-wrap">PLACEHOLDER: see README.md in the repository for full details.</pre>
+  <div id="readme-content">
+<!-- BEGIN README -->
+<h1>Overview of the Declarative Agent with TypeSpec for Microsoft 365 template</h1>
+<p>With the declarative agent, you can build a custom version of Copilot that can be used for specific scenarios, such as for specialized knowledge, implementing specific processes, or simply to save time by reusing a set of AI prompts. For example, a grocery shopping Copilot declarative agent can be used to create a grocery list based on a meal plan that you send to Copilot.</p>
+<h2>Get started with the template</h2>
+<blockquote>
+<p><strong>Prerequisites</strong></p>
+<p>To run this app template in your local dev machine, you will need:</p>
+<ul>
+<li><a href="https://nodejs.org/">Node.js</a>, supported versions: 18, 20, 22</li>
+<li>A <a href="https://docs.microsoft.com/microsoftteams/platform/toolkit/accounts">Microsoft 365 account for development</a>.</li>
+<li><a href="https://aka.ms/teams-toolkit">Microsoft 365 Agents Toolkit Visual Studio Code Extension</a> version 5.0.0 and higher or <a href="https://aka.ms/teamsfx-toolkit-cli">Microsoft 365 Agents Toolkit CLI</a></li>
+<li><a href="https://learn.microsoft.com/microsoft-365-copilot/extensibility/prerequisites#prerequisites">Microsoft 365 Copilot license</a></li>
+</ul>
+</blockquote>
+<p><img src="./assets/image.png" alt="image"></p>
+<ol>
+<li>First, select the Microsoft 365 Agents Toolkit icon on the left in the VS Code toolbar.</li>
+<li>In the Account section, sign in with your <a href="https://docs.microsoft.com/microsoftteams/platform/toolkit/accounts">Microsoft 365 account</a> if you haven't already.</li>
+<li>Run <code>npm install</code> to install dependencies before working with TypeSpec files.</li>
+<li>Update the <a href="./main.tsp"><code>main.tsp</code></a> to configure your agent and its plugins. This is the default entry point for TypeSpec files. </li>
+<li>Select <code>Preview Local in Copilot (Edge)</code> or <code>Preview Local in Copilot (Chrome)</code> from the launch configuration dropdown.</li>
+<li>Select your declarative agent from the <code>Copilot</code> app.</li>
+<li>Ask a question to your declarative agent and it should respond based on the instructions provided.</li>
+</ol>
+<h2>What's included in the template</h2>
+<table>
+<thead>
+<tr>
+<th>Folder</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>.vscode</code></td>
+<td>VSCode files for debugging</td>
+</tr>
+<tr>
+<td><code>appPackage</code></td>
+<td>Templates for the application manifest, the manifest and the API specification</td>
+</tr>
+<tr>
+<td><code>src/agent/actions</code></td>
+<td>All action files representing API surfaces</td>
+</tr>
+<tr>
+<td><code>env</code></td>
+<td>Environment files</td>
+</tr>
+<tr>
+<td><code>src/agent/prompts</code></td>
+<td>All prompt files used for instructions</td>
+</tr>
+<tr>
+<td><code>scripts</code></td>
+<td>Scripts helping with automation across the build process</td>
+</tr>
+</tbody></table>
+<p>The following files can be customized and demonstrate an example implementation to get you started.</p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Contents</th>
+<tr>
+</thead>
+<tbody><tr>
+<td><code>appPackage/manifest.json</code></td>
+<td>application manifest that defines metadata for your declarative agent.</td>
+</tr>
+</tbody></table>
+<p>The following are Microsoft 365 Agents Toolkit specific project files. You can <a href="https://github.com/OfficeDev/TeamsFx/wiki/Teams-Toolkit-Visual-Studio-Code-v5-Guide#overview">visit a complete guide on Github</a> to understand how Microsoft 365 Agents Toolkit works.</p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Contents</th>
+<tr>
+</thead>
+<tbody><tr>
+<td><code>m365agents.yml</code></td>
+<td>This is the main Microsoft 365 Agents Toolkit project file. The project file defines two primary things: Properties and configuration Stage definitions.</td>
+</tr>
+</tbody></table>
+<p>The following are TypeSpec template files. You need to customize these files to configure your agent.</p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Contents</th>
+<tr>
+</thead>
+<tbody><tr>
+<td><code>src/agent/main.tsp</code></td>
+<td>This is the root file of TSP files. Please manually update this file to add your own agent.</td>
+</tr>
+<tr>
+<td><code>src/agent/actions/*.tsp</code></td>
+<td>These are action files containing API endpoints to extend your declarative agent.</td>
+</tr>
+<tr>
+<td><code>src/agent/prompts/*.tsp</code></td>
+<td>These are prompt files used for instructions inf your declarative agent.</td>
+</tr>
+<tr>
+<td><code>src/agent/env.tsp</code></td>
+<td>This is the file containing all environment variables to be used in TypeSpec files.</td>
+</tr>
+</tbody></table>
+<h2>Extend the template</h2>
+<ul>
+<li><a href="https://learn.microsoft.com/en-us/microsoft-365-copilot/extensibility/build-declarative-agents-typespec#add-instructions">Add instructions</a>: Instructions change how an agent behaves. </li>
+<li><a href="https://learn.microsoft.com/en-us/microsoft-365-copilot/extensibility/build-declarative-agents-typespec#add-conversation-starters">Add conversation starters</a>: Conversation starters are hints that are displayed to the user to demonstrate how they can get started using the declarative agent.</li>
+<li><a href="https://learn.microsoft.com/en-us/microsoft-365-copilot/extensibility/build-declarative-agents-typespec#add-web-content">Add web content</a>: The web search capability enables agents to use the search index in Bing to respond to user prompts.</li>
+<li><a href="https://learn.microsoft.com/en-us/microsoft-365-copilot/extensibility/build-declarative-agents-typespec#add-onedrive-and-sharepoint-content">Add OneDrive and SharePoint content</a> as grounding knowledge for the agent.</li>
+<li><a href="https://learn.microsoft.com/en-us/microsoft-365-copilot/extensibility/build-declarative-agents-typespec#add-teams-messages">Add Teams messages</a>: The Teams messages capability allows the agent to use Teams channels, team, and meeting chat as knowledge.</li>
+<li><a href="https://learn.microsoft.com/en-us/microsoft-365-copilot/extensibility/build-declarative-agents-typespec#add-people-knowledge">Add people knowledge</a>: The people capability allows you to scope your agent to answer questions about individuals in an organization.</li>
+<li><a href="https://learn.microsoft.com/en-us/microsoft-365-copilot/extensibility/build-declarative-agents-typespec#add-email-knowledge">Add email knowledge</a>: The email capability allows you to scope your agent to use email from the user&#39;s mailbox or a shared mailbox as a knowledge source.</li>
+<li><a href="https://learn.microsoft.com/en-us/microsoft-365-copilot/extensibility/build-declarative-agents-typespec#add-image-generator">Add image generator</a>: The image generator capability enables agents to generate images based on user prompts.</li>
+<li><a href="https://learn.microsoft.com/en-us/microsoft-365-copilot/extensibility/build-declarative-agents-typespec#add-code-interpreter">Add code interpreter</a>: The code interpreter capability is an advanced tool designed to solve complex tasks via Python code.</li>
+<li><a href="https://learn.microsoft.com/en-us/microsoft-365-copilot/extensibility/build-declarative-agents-typespec#add-copilot-connectors-content">Add Copilot Connectors content</a>: You can add items ingested by a Copilot connector to the available knowledge for the agent.</li>
+<li><a href="https://learn.microsoft.com/en-us/microsoft-365-copilot/extensibility/build-api-plugins-typespec">Add actions</a>: API plugins are custom actions for declarative agents that connect a REST API with an OpenAPI specification to Microsoft 365 Copilot.</li>
+</ul>
+<h2>Addition information and references</h2>
+<ul>
+<li><a href="https://aka.ms/teams-toolkit-declarative-agent">Declarative agents for Microsoft 365</a></li>
+</ul>
+<!-- END README -->
+  </div>
   <p><a href="https://github.com/rintuchowdory/rintu">View repository on GitHub</a></p>
 </body>
 </html>
