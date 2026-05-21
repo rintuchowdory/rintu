@@ -12,13 +12,9 @@ using TypeSpec.M365.Copilot.Agents;
   "Declarative agent created with Microsoft 365 Agents Toolkit and TypeSpec for Microsoft 365 Copilot."
 )
 @instructions(Prompts.INSTRUCTIONS)
-// Uncomment this part to add a conversation starter to the agent.
-// This will be shown to the user when the agent is first created.
-// @conversationStarter(#{
-//   title: "Get latest issues",
-//   text: "Get the latest issues from GitHub" 
-// })
+// Conversation starter shown to users when the agent is first created.
+@conversationStarter(#{ title: "Search GitHub issues", text: "Show open issues for microsoft-365-agents-toolkit" })
 namespace rintu {  
-  // Uncomment this part to include custom actions in the agent
-  // op searchIssues is global.GitHubAPI.searchIssues;
+  // Expose the GitHub search action to the agent.
+  op searchIssues is GitHubAPI.searchIssues;
 }
