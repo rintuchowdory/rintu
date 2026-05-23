@@ -1,6 +1,9 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Search, GitPullRequest, AlertCircle, ExternalLink, User, Tag, ChevronLeft, ChevronRight, Github, Loader2, X, Filter } from "lucide-react";
+import {
+  Search, GitPullRequest, AlertCircle, ExternalLink, User, Tag,
+  ChevronLeft, ChevronRight, Github, Loader2, X, ChevronDown, Check,
+} from "lucide-react";
 
 interface GitHubLabel {
   id: number;
@@ -53,6 +56,14 @@ async function searchGitHubIssues(
   return res.json();
 }
 
+async function fetchRepoLabels(repo: string): Promise<GitHubLabel[]> {
+  const [owner, repoName] = repo.split("/");
+  if (!owner || !repoName) return [];
+  const res = await fetch(`/api/github/repos/${owner}/${repoName}/labels`);
+  if (!res.ok) return [];
+  return res.json();
+}
+
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-US", {
     year: "numeric",
@@ -61,12 +72,12 @@ function formatDate(iso: string) {
   });
 }
 
-function getLabelTextColor(hex: string) {
+function getLabelColor(hex: string) {
   const r = parseInt(hex.slice(0, 2), 16);
   const g = parseInt(hex.slice(2, 4), 16);
   const b = parseInt(hex.slice(4, 6), 16);
   const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  return luminance > 0.5 ? "#000000" : "#ffffff";
+  return { fg: luminance > 0.5 ? `#${hex}` : `#${hex}`, dark: luminance > 0.5 };
 }
 
 function IssueCard({ issue }: { issue: GitHubIssue }) {
@@ -136,7 +147,7 @@ function IssueCard({ issue }: { issue: GitHubIssue }) {
                   className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium"
                   style={{
                     backgroundColor: `#${label.color}33`,
-                    color: getLabelTextColor(label.color) === "#000000" ? `#${label.color}` : `#${label.color}`,
+                    color: `#${label.color}`,
                     border: `1px solid #${label.color}55`,
                   }}
                 >
@@ -168,17 +179,179 @@ function IssueCard({ issue }: { issue: GitHubIssue }) {
   );
 }
 
+function LabelDropdown({
+  repo,
+  selectedLabels,
+  onChange,
+}: {
+  repo: string;
+  selectedLabels: string[];
+  onChange: (labels: string[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [filter, setFilter] = useState("");
+  const ref = useRef<HTMLDivElement>(null);
+
+  const isValidRepo = /^[^/]+\/[^/]+$/.test(repo.trim());
+
+  const { data: labels = [], isLoading } = useQuery({
+    queryKey: ["repo-labels", repo],
+    queryFn: () => fetchRepoLabels(repo),
+    enabled: isValidRepo,
+    staleTime: 5 * 60_000,
+  });
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+        setFilter("");
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  const filtered = labels.filter((l) =>
+    l.name.toLowerCase().includes(filter.toLowerCase())
+  );
+
+  const toggle = (name: string) => {
+    onChange(
+      selectedLabels.includes(name)
+        ? selectedLabels.filter((l) => l !== name)
+        : [...selectedLabels, name]
+    );
+  };
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => { if (isValidRepo) setOpen((o) => !o); }}
+        disabled={!isValidRepo}
+        className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-all w-full
+          ${open ? "border-ring ring-2 ring-ring bg-background" : "border-input bg-background hover:border-primary/50"}
+          ${!isValidRepo ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}
+        `}
+      >
+        <Tag className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+        <span className="flex-1 text-left truncate">
+          {selectedLabels.length === 0 ? (
+            <span className="text-muted-foreground">Filter by label…</span>
+          ) : (
+            <span className="flex flex-wrap gap-1">
+              {selectedLabels.map((l) => {
+                const label = labels.find((lb) => lb.name === l);
+                return (
+                  <span
+                    key={l}
+                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[11px] font-medium"
+                    style={
+                      label
+                        ? {
+                            backgroundColor: `#${label.color}33`,
+                            color: `#${label.color}`,
+                            border: `1px solid #${label.color}55`,
+                          }
+                        : { backgroundColor: "var(--color-muted)" }
+                    }
+                  >
+                    {l}
+                  </span>
+                );
+              })}
+            </span>
+          )}
+        </span>
+        <div className="flex items-center gap-1 shrink-0">
+          {isLoading && <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />}
+          {selectedLabels.length > 0 && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onChange([]); }}
+              className="text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+          <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} />
+        </div>
+      </button>
+
+      {open && (
+        <div className="absolute z-20 top-full mt-1.5 w-full bg-popover border border-popover-border rounded-xl shadow-lg overflow-hidden">
+          {/* Search within labels */}
+          <div className="p-2 border-b border-border">
+            <input
+              autoFocus
+              type="text"
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              placeholder="Search labels…"
+              className="w-full px-2.5 py-1.5 rounded-md border border-input bg-background text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+          </div>
+
+          <div className="max-h-56 overflow-y-auto">
+            {filtered.length === 0 ? (
+              <div className="px-3 py-4 text-center text-xs text-muted-foreground">
+                {labels.length === 0 ? "No labels found for this repo" : "No labels match"}
+              </div>
+            ) : (
+              filtered.map((label) => {
+                const selected = selectedLabels.includes(label.name);
+                const { dark } = getLabelColor(label.color);
+                return (
+                  <button
+                    key={label.id}
+                    type="button"
+                    onClick={() => toggle(label.name)}
+                    className="flex items-center gap-2.5 w-full px-3 py-2 hover:bg-muted transition-colors text-left"
+                  >
+                    <div
+                      className="w-3 h-3 rounded-full shrink-0 border"
+                      style={{
+                        backgroundColor: `#${label.color}`,
+                        borderColor: dark ? `#${label.color}` : `#${label.color}99`,
+                      }}
+                    />
+                    <span className="flex-1 text-xs text-foreground">{label.name}</span>
+                    {selected && <Check className="w-3.5 h-3.5 text-primary shrink-0" />}
+                  </button>
+                );
+              })
+            )}
+          </div>
+
+          {selectedLabels.length > 0 && (
+            <div className="px-3 py-2 border-t border-border">
+              <button
+                onClick={() => { onChange([]); setOpen(false); }}
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Clear all labels
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function SearchPage() {
   const [repo, setRepo] = useState("OfficeDev/microsoft-365-agents-toolkit");
   const [inputValue, setInputValue] = useState("OfficeDev/microsoft-365-agents-toolkit");
-  const [extraQuery, setExtraQuery] = useState("");
+  const [keyword, setKeyword] = useState("");
+  const [selectedLabels, setSelectedLabels] = useState<string[]>([]);
   const [state, setState] = useState<"open" | "closed" | "all">("open");
   const [page, setPage] = useState(1);
   const [hasSearched, setHasSearched] = useState(true);
 
+  const labelQuery = selectedLabels.map((l) => `label:"${l}"`).join(" ");
   const searchQuery = repo
-    ? `repo:${repo}${extraQuery ? " " + extraQuery : ""}`
-    : extraQuery || "microsoft-365-agents-toolkit";
+    ? `repo:${repo}${keyword ? " " + keyword : ""}${labelQuery ? " " + labelQuery : ""}`
+    : keyword || "microsoft-365-agents-toolkit";
 
   const { data, isLoading, isError, error, isFetching } = useQuery({
     queryKey: ["github-issues", searchQuery, state, page],
@@ -191,6 +364,7 @@ export default function SearchPage() {
 
   const handleSearch = useCallback(() => {
     setRepo(inputValue.trim());
+    setSelectedLabels([]);
     setPage(1);
     setHasSearched(true);
   }, [inputValue]);
@@ -201,6 +375,11 @@ export default function SearchPage() {
 
   const handleStateChange = (newState: "open" | "closed" | "all") => {
     setState(newState);
+    setPage(1);
+  };
+
+  const handleLabelChange = (labels: string[]) => {
+    setSelectedLabels(labels);
     setPage(1);
   };
 
@@ -227,12 +406,13 @@ export default function SearchPage() {
             </div>
             <h1 className="text-2xl font-bold text-foreground tracking-tight">GitHub Issues Search</h1>
             <p className="text-sm text-muted-foreground mt-1.5 max-w-sm mx-auto">
-              Search and explore open issues from any public GitHub repository
+              Search and explore issues from any public GitHub repository
             </p>
           </div>
 
-          {/* Search bar */}
-          <div className="max-w-2xl mx-auto space-y-3">
+          {/* Search controls */}
+          <div className="max-w-2xl mx-auto space-y-2.5">
+            {/* Repo + Search button */}
             <div className="flex gap-2">
               <div className="flex-1 relative">
                 <Github className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -263,17 +443,24 @@ export default function SearchPage() {
               </button>
             </div>
 
-            {/* Additional keyword filter */}
-            <div className="relative">
-              <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-              <input
-                type="text"
-                value={extraQuery}
-                onChange={(e) => { setExtraQuery(e.target.value); setPage(1); }}
-                onKeyDown={handleKeyDown}
-                placeholder='Optional: add keywords, labels, etc. (e.g. "label:bug is:closed")'
-                className="w-full pl-9 pr-4 py-2 rounded-lg border border-input bg-background text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-all"
+            {/* Label dropdown + keyword row */}
+            <div className="grid grid-cols-2 gap-2">
+              <LabelDropdown
+                repo={repo}
+                selectedLabels={selectedLabels}
+                onChange={handleLabelChange}
               />
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                <input
+                  type="text"
+                  value={keyword}
+                  onChange={(e) => { setKeyword(e.target.value); setPage(1); }}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Keyword filter…"
+                  className="w-full pl-9 pr-4 py-2 rounded-lg border border-input bg-background text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-all"
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -281,7 +468,7 @@ export default function SearchPage() {
 
       {/* Filters & results */}
       <div className="flex-1 max-w-4xl mx-auto w-full px-4 py-6">
-        {/* State filter */}
+        {/* State toggle + result count */}
         {hasSearched && (
           <div className="flex items-center justify-between mb-5">
             <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
@@ -313,6 +500,24 @@ export default function SearchPage() {
           </div>
         )}
 
+        {/* Active label chips */}
+        {selectedLabels.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mb-4 items-center">
+            <span className="text-xs text-muted-foreground">Filtered by:</span>
+            {selectedLabels.map((l) => (
+              <button
+                key={l}
+                onClick={() => handleLabelChange(selectedLabels.filter((x) => x !== l))}
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-colors"
+              >
+                <Tag className="w-2.5 h-2.5" />
+                {l}
+                <X className="w-2.5 h-2.5" />
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* Error */}
         {isError && (
           <div className="flex items-start gap-3 p-4 rounded-xl bg-destructive/10 border border-destructive/20 text-sm text-destructive">
@@ -320,9 +525,6 @@ export default function SearchPage() {
             <div>
               <div className="font-semibold">Failed to fetch issues</div>
               <div className="mt-0.5 text-destructive/80">{(error as Error).message}</div>
-              {(error as Error).message.includes("rate limit") && (
-                <div className="mt-1 text-destructive/70">GitHub API has a rate limit of 10 unauthenticated requests per minute. Please wait a moment and try again.</div>
-              )}
             </div>
           </div>
         )}
@@ -367,7 +569,7 @@ export default function SearchPage() {
             </div>
             <h3 className="font-semibold text-foreground">No issues found</h3>
             <p className="text-sm text-muted-foreground mt-1">
-              Try adjusting your search query or filter settings.
+              Try adjusting your search query, labels, or state filter.
             </p>
           </div>
         )}
@@ -416,11 +618,13 @@ export default function SearchPage() {
           </div>
         )}
 
-        {/* Footer note */}
         {data && (
           <p className="text-center text-xs text-muted-foreground/60 mt-8">
-            Data from <a href="https://docs.github.com/en/rest/search/search" target="_blank" rel="noopener noreferrer" className="hover:underline">GitHub REST API</a>
-            {data.incomplete_results && " · Results may be incomplete due to rate limits"}
+            Data from{" "}
+            <a href="https://docs.github.com/en/rest/search/search" target="_blank" rel="noopener noreferrer" className="hover:underline">
+              GitHub REST API
+            </a>
+            {data.incomplete_results && " · Results may be incomplete"}
           </p>
         )}
       </div>
