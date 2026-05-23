@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Rintu — GitHub Issues Search"
+version = "1.0.0"
+id = "artifacts/rintu"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 23500
+
+[services.development]
+run = "pnpm --filter @workspace/rintu run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/rintu", "run", "build" ]
+publicDir = "artifacts/rintu/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23500"
+BASE_PATH = "/"

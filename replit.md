@@ -1,36 +1,37 @@
-# [Project name]
+# Rintu — GitHub Issues Explorer
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+A live GitHub Issues search web app based on the `rintuchowdory/rintu` repository. Users can search any public GitHub repository's issues directly in the browser.
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
+- `pnpm --filter @workspace/rintu run dev` — run the frontend (port assigned automatically)
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
 
 ## Stack
 
 - pnpm workspaces, Node.js 24, TypeScript 5.9
-- API: Express 5
-- DB: PostgreSQL + Drizzle ORM
-- Validation: Zod (`zod/v4`), `drizzle-zod`
-- API codegen: Orval (from OpenAPI spec)
-- Build: esbuild (CJS bundle)
+- Frontend: React + Vite, Tailwind CSS, TanStack Query
+- API: GitHub REST API (public, no auth required)
+- Build: Vite static build
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `artifacts/rintu/src/pages/Search.tsx` — main search page (GitHub API calls, results, pagination)
+- `artifacts/rintu/src/App.tsx` — app entry point
+- `artifacts/rintu/src/index.css` — design tokens and theme
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- Calls GitHub REST API directly from the browser — no backend needed for public repo search
+- TanStack Query handles caching, deduplication and loading states
+- GitHub unauthenticated API allows 10 req/min — staleTime is set to 30s to reduce re-fetches
+- State filter (open/closed/all) and optional keyword filter are composed into a single GitHub search query string
+- Pagination capped at 100 pages (GitHub API limit)
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+Users can search any public GitHub repository's issues by typing `owner/repo`, optionally adding keywords or label filters, and toggling between open/closed/all states. Each result card shows the issue title, number, author, date, body preview, labels, and assignee.
 
 ## User preferences
 
@@ -38,7 +39,8 @@ _Populate as you build — explicit user instructions worth remembering across s
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- GitHub unauthenticated search API rate limit: 10 requests per minute. If rate limited, users see a clear error message.
+- Pagination is capped at page 100 by the GitHub API regardless of total_count.
 
 ## Pointers
 
