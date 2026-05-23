@@ -43,11 +43,9 @@ async function searchGitHubIssues(
   page: number
 ): Promise<GitHubSearchResult> {
   const stateFilter = state !== "all" ? ` is:${state}` : "";
-  const q = encodeURIComponent(`${query} is:issue${stateFilter}`);
-  const url = `https://api.github.com/search/issues?q=${q}&per_page=${PER_PAGE}&page=${page}`;
-  const res = await fetch(url, {
-    headers: { Accept: "application/vnd.github.v3+json" },
-  });
+  const q = `${query} is:issue${stateFilter}`;
+  const params = new URLSearchParams({ q, per_page: String(PER_PAGE), page: String(page) });
+  const res = await fetch(`/api/github/search/issues?${params}`);
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error((err as { message?: string }).message || `GitHub API error: ${res.status}`);
