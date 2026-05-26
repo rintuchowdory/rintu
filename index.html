@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Rintu | SaaS CRM Dashboard</title>
+    <meta name="description" content="Professional SaaS-style CRM dashboard portfolio for AI agent and deployment workflows." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <aside class="sidebar">
+      <div class="brand">Rintu<span>CRM</span></div>
+      <nav>
+        <a class="active" href="#overview">Overview</a>
+        <a href="#analytics">Analytics</a>
+        <a href="#clients">Clients</a>
+        <a href="#activity">Activity</a>
+        <a href="#agents">Agents</a>
+      </nav>
+      <div class="sidebar-card">
+        <h4>Stack</h4>
+        <p>TypeSpec · Node.js · Express · Render · M365 Agents Toolkit</p>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar" id="overview">
+        <div>
+          <p class="eyebrow">SaaS CRM Command Center</p>
+          <h1>Hi, I'm Rintu 👋</h1>
+          <p class="sub">Shipping production-ready agent platforms, dashboards, and deployment pipelines.</p>
+        </div>
+        <div class="status-pill">Status: <strong>All Systems Operational</strong></div>
+      </header>
+
+      <section class="kpi-grid">
+        <article class="kpi"><h3>$128k</h3><p>Monthly Revenue</p></article>
+        <article class="kpi"><h3>324</h3><p>Active Customers</p></article>
+        <article class="kpi"><h3>97.9%</h3><p>Retention</p></article>
+        <article class="kpi"><h3>18</h3><p>Live Integrations</p></article>
+      </section>
+
+      <section class="panel two-col" id="analytics">
+        <div>
+          <h2>Revenue Analytics</h2>
+          <p>Quarterly performance placeholder chart with growth trend.</p>
+          <div class="chart-placeholder" aria-label="Revenue chart placeholder">
+            <div class="bars">
+              <span style="height: 36%"></span>
+              <span style="height: 48%"></span>
+              <span style="height: 62%"></span>
+              <span style="height: 74%"></span>
+              <span style="height: 88%"></span>
+            </div>
+            <div class="chart-labels"><span>Q1</span><span>Q2</span><span>Q3</span><span>Q4</span><span>Q5</span></div>
+          </div>
+        </div>
+        <div class="mini-card">
+          <h3>Pipeline Health</h3>
+          <p>New Leads: <strong>42</strong></p>
+          <p>Qualified: <strong>28</strong></p>
+          <p>Won This Month: <strong>15</strong></p>
+        </div>
+      </section>
+
+      <section class="panel" id="clients">
+        <h2>Client Table</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Client</th><th>Plan</th><th>MRR</th><th>Health</th><th>Owner</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Northwind Labs</td><td>Enterprise</td><td>$12,000</td><td><span class="pill good">Healthy</span></td><td>Rintu</td></tr>
+              <tr><td>Contoso Retail</td><td>Growth</td><td>$6,400</td><td><span class="pill warn">Needs Review</span></td><td>Ops Team</td></tr>
+              <tr><td>Fabrikam Health</td><td>Enterprise</td><td>$9,900</td><td><span class="pill good">Healthy</span></td><td>Rintu</td></tr>
+              <tr><td>Tailspin Media</td><td>Starter</td><td>$1,200</td><td><span class="pill risk">At Risk</span></td><td>CSM Desk</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel two-col" id="activity">
+        <div>
+          <h2>Activity Feed</h2>
+          <ul class="activity-list">
+            <li><span>10:24</span> Deployed Render service successfully to production.</li>
+            <li><span>09:40</span> Updated Express routing fallback for SPA behavior.</li>
+            <li><span>08:15</span> Added TypeSpec action docs and reviewed schema quality.</li>
+            <li><span>Yesterday</span> Provisioned local agent environment and validated compile.</li>
+          </ul>
+        </div>
+        <div class="mini-card" id="agents">
+          <h3>Agent Ops</h3>
+          <p>Capabilities: WebSearch, Dataverse, Teams, Email, CodeInterpreter.</p>
+          <p><a class="btn" href="/openapi.json">OpenAPI Endpoint</a></p>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>
