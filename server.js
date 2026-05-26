@@ -11,7 +11,7 @@ app.get(["/openapi.json", "/api/openapi.json"], (req, res) => {
   res.sendFile(path.join(root, "appPackage", ".generated", "specs", "openapi.json"));
 });
 
-app.get("*", (req, res) => {
+app.get("/*splat", (req, res) => {
   res.sendFile(path.join(root, "index.html"));
 });
 
