@@ -3,8 +3,9 @@ import { useQuery } from "@tanstack/react-query";
 import {
   Search, GitPullRequest, AlertCircle, ExternalLink, User, Tag,
   ChevronLeft, ChevronRight, Github, Loader2, X, ChevronDown, Check,
-  ArrowUpDown, Link, Sun, Moon, MessageSquare, Star,
+  ArrowUpDown, Link, Sun, Moon, MessageSquare, Star, Clock, Trash2,
 } from "lucide-react";
+import { useRecentRepos } from "@/hooks/useRecentRepos";
 
 interface GitHubLabel { id: number; name: string; color: string; }
 interface GitHubUser { login: string; avatar_url: string; html_url: string; }
@@ -353,6 +354,50 @@ function ThemeToggle({ theme, onToggle }: { theme: string; onToggle: () => void 
   );
 }
 
+// ── Recent Repos Dropdown ───────────────────────────────────────────────────
+function RecentReposDropdown({
+  recents, onSelect, onRemove, onClear,
+}: {
+  recents: string[];
+  onSelect: (repo: string) => void;
+  onRemove: (repo: string) => void;
+  onClear: () => void;
+}) {
+  if (recents.length === 0) return null;
+  return (
+    <div className="absolute z-30 top-full mt-1.5 left-0 right-0 bg-popover border border-border rounded-2xl shadow-xl overflow-hidden animate-in fade-in-0 zoom-in-95 duration-100">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-border">
+        <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+          <Clock className="w-3 h-3" /> Recent
+        </span>
+        <button
+          onMouseDown={(e) => { e.preventDefault(); onClear(); }}
+          className="text-[11px] text-muted-foreground hover:text-destructive transition-colors flex items-center gap-1"
+        >
+          <Trash2 className="w-3 h-3" /> Clear all
+        </button>
+      </div>
+      {recents.map((r) => (
+        <div key={r} className="flex items-center group hover:bg-muted transition-colors">
+          <button
+            onMouseDown={(e) => { e.preventDefault(); onSelect(r); }}
+            className="flex-1 flex items-center gap-2.5 px-3 py-2.5 text-left"
+          >
+            <Github className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+            <span className="text-sm text-foreground font-mono">{r}</span>
+          </button>
+          <button
+            onMouseDown={(e) => { e.preventDefault(); onRemove(r); }}
+            className="px-3 py-2.5 text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-destructive transition-all"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ── Main Page ───────────────────────────────────────────────────────────────
 export default function SearchPage({ theme, onToggleTheme }: { theme: string; onToggleTheme: () => void }) {
   const initial = parseUrlState();
@@ -364,6 +409,8 @@ export default function SearchPage({ theme, onToggleTheme }: { theme: string; on
   const [page, setPage] = useState(initial.page);
   const [sortIdx, setSortIdx] = useState(initial.sortIdx);
   const [copied, setCopied] = useState(false);
+  const [repoFocused, setRepoFocused] = useState(false);
+  const { recents, push: pushRecent, remove: removeRecent, clear: clearRecents } = useRecentRepos();
 
   const activeSort = SORT_OPTIONS[sortIdx];
   const labelQuery = selectedLabels.map((l) => `label:"${l}"`).join(" ");
@@ -384,7 +431,15 @@ export default function SearchPage({ theme, onToggleTheme }: { theme: string; on
 
   const totalPages = data ? Math.min(Math.ceil(data.total_count / PER_PAGE), 100) : 0;
 
-  const handleSearch = useCallback(() => { setRepo(inputValue.trim()); setSelectedLabels([]); setPage(1); }, [inputValue]);
+  const handleSearch = useCallback(() => {
+    const trimmed = inputValue.trim();
+    if (!trimmed) return;
+    setRepo(trimmed);
+    setSelectedLabels([]);
+    setPage(1);
+    pushRecent(trimmed);
+    setRepoFocused(false);
+  }, [inputValue, pushRecent]);
   const handleKeyDown = (e: React.KeyboardEvent) => { if (e.key === "Enter") handleSearch(); };
   const handleStateChange = (s: "open" | "closed" | "all") => { setState(s); setPage(1); };
   const handleSortChange = (i: number) => { setSortIdx(i); setPage(1); };
@@ -453,20 +508,30 @@ export default function SearchPage({ theme, onToggleTheme }: { theme: string; on
             {/* Repo input */}
             <div className="flex gap-2.5">
               <div className="flex-1 relative group">
-                <Github className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                <Github className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors z-10" />
                 <input
                   type="text"
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
                   onKeyDown={handleKeyDown}
+                  onFocus={() => setRepoFocused(true)}
+                  onBlur={() => setRepoFocused(false)}
                   placeholder="owner/repo — e.g. microsoft/vscode"
                   className="w-full pl-10 pr-10 py-3 rounded-xl border border-input bg-background/80 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/60 transition-all shadow-sm"
                 />
                 {inputValue && (
                   <button onClick={() => setInputValue("")}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 p-0.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-all">
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 p-0.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-all z-10">
                     <X className="w-3.5 h-3.5" />
                   </button>
+                )}
+                {repoFocused && (
+                  <RecentReposDropdown
+                    recents={recents}
+                    onSelect={(r) => { setInputValue(r); setRepo(r); setSelectedLabels([]); setPage(1); pushRecent(r); }}
+                    onRemove={removeRecent}
+                    onClear={clearRecents}
+                  />
                 )}
               </div>
               <button
