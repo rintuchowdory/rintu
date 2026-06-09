@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Search, GitPullRequest, AlertCircle, ExternalLink, User, Tag,
-  ChevronLeft, ChevronRight, Github, Loader2, X, ChevronDown, Check, ArrowUpDown,
+  ChevronLeft, ChevronRight, Github, Loader2, X, ChevronDown, Check, ArrowUpDown, Link,
 } from "lucide-react";
 
 interface GitHubLabel {
@@ -51,6 +51,38 @@ const SORT_OPTIONS: SortOption[] = [
   { sort: "reactions", order: "desc", label: "Most reactions"   },
 ];
 
+function parseUrlState() {
+  const p = new URLSearchParams(window.location.search);
+  const sortLabel = p.get("sort") ?? "";
+  const sortIdx = SORT_OPTIONS.findIndex((o) => o.label === sortLabel);
+  return {
+    repo:    p.get("repo")   ?? "OfficeDev/microsoft-365-agents-toolkit",
+    keyword: p.get("q")     ?? "",
+    labels:  p.get("labels") ? p.get("labels")!.split(",").filter(Boolean) : [],
+    state:   (p.get("state") ?? "open") as "open" | "closed" | "all",
+    sortIdx: sortIdx >= 0 ? sortIdx : 0,
+    page:    Number(p.get("page") ?? 1),
+  };
+}
+
+function buildShareUrl(
+  repo: string,
+  keyword: string,
+  labels: string[],
+  state: string,
+  sortIdx: number,
+  page: number
+): string {
+  const p = new URLSearchParams();
+  p.set("repo", repo);
+  if (keyword) p.set("q", keyword);
+  if (labels.length) p.set("labels", labels.join(","));
+  if (state !== "open") p.set("state", state);
+  if (sortIdx !== 0) p.set("sort", SORT_OPTIONS[sortIdx].label);
+  if (page > 1) p.set("page", String(page));
+  return `${window.location.origin}${window.location.pathname}?${p.toString()}`;
+}
+
 async function searchGitHubIssues(
   query: string,
   state: string,
@@ -91,7 +123,7 @@ function getLabelColor(hex: string) {
   const g = parseInt(hex.slice(2, 4), 16);
   const b = parseInt(hex.slice(4, 6), 16);
   const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  return { fg: luminance > 0.5 ? `#${hex}` : `#${hex}`, dark: luminance > 0.5 };
+  return { dark: luminance > 0.5 };
 }
 
 function IssueCard({ issue }: { issue: GitHubIssue }) {
@@ -294,7 +326,6 @@ function LabelDropdown({
 
       {open && (
         <div className="absolute z-20 top-full mt-1.5 w-full bg-popover border border-popover-border rounded-xl shadow-lg overflow-hidden">
-          {/* Search within labels */}
           <div className="p-2 border-b border-border">
             <input
               autoFocus
@@ -398,14 +429,17 @@ function SortDropdown({ value, onChange }: { value: number; onChange: (idx: numb
 }
 
 export default function SearchPage() {
-  const [repo, setRepo] = useState("OfficeDev/microsoft-365-agents-toolkit");
-  const [inputValue, setInputValue] = useState("OfficeDev/microsoft-365-agents-toolkit");
-  const [keyword, setKeyword] = useState("");
-  const [selectedLabels, setSelectedLabels] = useState<string[]>([]);
-  const [state, setState] = useState<"open" | "closed" | "all">("open");
-  const [page, setPage] = useState(1);
+  const initial = parseUrlState();
+
+  const [repo, setRepo] = useState(initial.repo);
+  const [inputValue, setInputValue] = useState(initial.repo);
+  const [keyword, setKeyword] = useState(initial.keyword);
+  const [selectedLabels, setSelectedLabels] = useState<string[]>(initial.labels);
+  const [state, setState] = useState<"open" | "closed" | "all">(initial.state);
+  const [page, setPage] = useState(initial.page);
   const [hasSearched, setHasSearched] = useState(true);
-  const [sortIdx, setSortIdx] = useState(0);
+  const [sortIdx, setSortIdx] = useState(initial.sortIdx);
+  const [copied, setCopied] = useState(false);
 
   const activeSort = SORT_OPTIONS[sortIdx];
 
@@ -413,6 +447,12 @@ export default function SearchPage() {
   const searchQuery = repo
     ? `repo:${repo}${keyword ? " " + keyword : ""}${labelQuery ? " " + labelQuery : ""}`
     : keyword || "microsoft-365-agents-toolkit";
+
+  // Sync state → URL whenever any search param changes
+  useEffect(() => {
+    const url = buildShareUrl(repo, keyword, selectedLabels, state, sortIdx, page);
+    window.history.replaceState(null, "", url);
+  }, [repo, keyword, selectedLabels, state, sortIdx, page]);
 
   const { data, isLoading, isError, error, isFetching } = useQuery({
     queryKey: ["github-issues", searchQuery, state, page, activeSort.sort, activeSort.order],
@@ -449,17 +489,39 @@ export default function SearchPage() {
     setPage(1);
   };
 
+  const handleCopyLink = async () => {
+    const url = buildShareUrl(repo, keyword, selectedLabels, state, sortIdx, page);
+    await navigator.clipboard.writeText(url).catch(() => {});
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <header className="border-b border-border bg-card/60 backdrop-blur sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center gap-3">
-          <div className="flex items-center gap-2 text-foreground">
-            <Github className="w-5 h-5" />
-            <span className="font-semibold text-sm">Rintu</span>
+        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 text-foreground">
+              <Github className="w-5 h-5" />
+              <span className="font-semibold text-sm">Rintu</span>
+            </div>
+            <div className="h-4 w-px bg-border" />
+            <span className="text-xs text-muted-foreground">GitHub Issues Explorer</span>
           </div>
-          <div className="h-4 w-px bg-border" />
-          <span className="text-xs text-muted-foreground">GitHub Issues Explorer</span>
+
+          {/* Share button */}
+          <button
+            onClick={handleCopyLink}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all ${
+              copied
+                ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600"
+                : "border-border text-muted-foreground hover:text-foreground hover:border-primary/50 hover:bg-muted"
+            }`}
+          >
+            <Link className="w-3.5 h-3.5" />
+            {copied ? "Copied!" : "Copy link"}
+          </button>
         </div>
       </header>
 
@@ -478,7 +540,6 @@ export default function SearchPage() {
 
           {/* Search controls */}
           <div className="max-w-2xl mx-auto space-y-2.5">
-            {/* Repo + Search button */}
             <div className="flex gap-2">
               <div className="flex-1 relative">
                 <Github className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -509,7 +570,6 @@ export default function SearchPage() {
               </button>
             </div>
 
-            {/* Label dropdown + keyword row */}
             <div className="grid grid-cols-2 gap-2">
               <LabelDropdown
                 repo={repo}
@@ -534,11 +594,9 @@ export default function SearchPage() {
 
       {/* Filters & results */}
       <div className="flex-1 max-w-4xl mx-auto w-full px-4 py-6">
-        {/* State toggle + sort + result count */}
         {hasSearched && (
           <div className="flex items-center justify-between gap-3 mb-5 flex-wrap">
             <div className="flex items-center gap-2 flex-wrap">
-              {/* State pills */}
               <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
                 {(["open", "closed", "all"] as const).map((s) => (
                   <button
@@ -556,8 +614,6 @@ export default function SearchPage() {
                   </button>
                 ))}
               </div>
-
-              {/* Sort dropdown */}
               <SortDropdown value={sortIdx} onChange={handleSortChange} />
             </div>
 
@@ -573,7 +629,6 @@ export default function SearchPage() {
           </div>
         )}
 
-        {/* Active label chips */}
         {selectedLabels.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mb-4 items-center">
             <span className="text-xs text-muted-foreground">Filtered by:</span>
@@ -591,7 +646,6 @@ export default function SearchPage() {
           </div>
         )}
 
-        {/* Error */}
         {isError && (
           <div className="flex items-start gap-3 p-4 rounded-xl bg-destructive/10 border border-destructive/20 text-sm text-destructive">
             <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
@@ -602,7 +656,6 @@ export default function SearchPage() {
           </div>
         )}
 
-        {/* Loading skeleton */}
         {isLoading && !data && (
           <div className="space-y-3">
             {Array.from({ length: 5 }).map((_, i) => (
@@ -625,7 +678,6 @@ export default function SearchPage() {
           </div>
         )}
 
-        {/* Results */}
         {data && data.items.length > 0 && (
           <div className="space-y-2.5">
             {data.items.map((issue) => (
@@ -634,7 +686,6 @@ export default function SearchPage() {
           </div>
         )}
 
-        {/* Empty state */}
         {data && data.items.length === 0 && (
           <div className="text-center py-16">
             <div className="inline-flex items-center justify-center w-12 h-12 bg-muted rounded-2xl mb-4">
@@ -647,7 +698,6 @@ export default function SearchPage() {
           </div>
         )}
 
-        {/* Pagination */}
         {data && totalPages > 1 && (
           <div className="flex items-center justify-center gap-2 mt-8">
             <button
