@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { useTheme } from "@/hooks/useTheme";
 import SearchPage from "@/pages/Search";
 
 const queryClient = new QueryClient({
@@ -13,10 +14,12 @@ const queryClient = new QueryClient({
 });
 
 function App() {
+  const { theme, toggle } = useTheme();
+
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <SearchPage />
+        <SearchPage theme={theme} onToggleTheme={toggle} />
         <Toaster />
       </TooltipProvider>
     </QueryClientProvider>
