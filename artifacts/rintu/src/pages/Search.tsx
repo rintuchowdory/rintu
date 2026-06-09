@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Search, GitPullRequest, AlertCircle, ExternalLink, User, Tag,
-  ChevronLeft, ChevronRight, Github, Loader2, X, ChevronDown, Check,
+  ChevronLeft, ChevronRight, Github, Loader2, X, ChevronDown, Check, ArrowUpDown,
 } from "lucide-react";
 
 interface GitHubLabel {
@@ -40,14 +40,28 @@ interface GitHubSearchResult {
 
 const PER_PAGE = 10;
 
+type SortOption = { sort: string; order: "asc" | "desc"; label: string };
+
+const SORT_OPTIONS: SortOption[] = [
+  { sort: "",          order: "desc", label: "Best match"       },
+  { sort: "created",   order: "desc", label: "Newest"           },
+  { sort: "created",   order: "asc",  label: "Oldest"           },
+  { sort: "updated",   order: "desc", label: "Recently updated" },
+  { sort: "comments",  order: "desc", label: "Most commented"   },
+  { sort: "reactions", order: "desc", label: "Most reactions"   },
+];
+
 async function searchGitHubIssues(
   query: string,
   state: string,
-  page: number
+  page: number,
+  sort: string,
+  order: "asc" | "desc"
 ): Promise<GitHubSearchResult> {
   const stateFilter = state !== "all" ? ` is:${state}` : "";
   const q = `${query} is:issue${stateFilter}`;
-  const params = new URLSearchParams({ q, per_page: String(PER_PAGE), page: String(page) });
+  const params = new URLSearchParams({ q, per_page: String(PER_PAGE), page: String(page), order });
+  if (sort) params.set("sort", sort);
   const res = await fetch(`/api/github/search/issues?${params}`);
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
@@ -339,6 +353,50 @@ function LabelDropdown({
   );
 }
 
+function SortDropdown({ value, onChange }: { value: number; onChange: (idx: number) => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all
+          ${open ? "border-ring ring-2 ring-ring bg-background text-foreground" : "border-border bg-background text-muted-foreground hover:text-foreground hover:border-primary/50"}`}
+      >
+        <ArrowUpDown className="w-3.5 h-3.5" />
+        {SORT_OPTIONS[value].label}
+        <ChevronDown className={`w-3 h-3 transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+
+      {open && (
+        <div className="absolute z-20 top-full mt-1.5 left-0 w-44 bg-popover border border-popover-border rounded-xl shadow-lg overflow-hidden">
+          {SORT_OPTIONS.map((opt, idx) => (
+            <button
+              key={idx}
+              type="button"
+              onClick={() => { onChange(idx); setOpen(false); }}
+              className="flex items-center justify-between w-full px-3 py-2 text-xs hover:bg-muted transition-colors text-left"
+            >
+              <span className={idx === value ? "text-foreground font-medium" : "text-muted-foreground"}>{opt.label}</span>
+              {idx === value && <Check className="w-3.5 h-3.5 text-primary shrink-0" />}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function SearchPage() {
   const [repo, setRepo] = useState("OfficeDev/microsoft-365-agents-toolkit");
   const [inputValue, setInputValue] = useState("OfficeDev/microsoft-365-agents-toolkit");
@@ -347,6 +405,9 @@ export default function SearchPage() {
   const [state, setState] = useState<"open" | "closed" | "all">("open");
   const [page, setPage] = useState(1);
   const [hasSearched, setHasSearched] = useState(true);
+  const [sortIdx, setSortIdx] = useState(0);
+
+  const activeSort = SORT_OPTIONS[sortIdx];
 
   const labelQuery = selectedLabels.map((l) => `label:"${l}"`).join(" ");
   const searchQuery = repo
@@ -354,8 +415,8 @@ export default function SearchPage() {
     : keyword || "microsoft-365-agents-toolkit";
 
   const { data, isLoading, isError, error, isFetching } = useQuery({
-    queryKey: ["github-issues", searchQuery, state, page],
-    queryFn: () => searchGitHubIssues(searchQuery, state, page),
+    queryKey: ["github-issues", searchQuery, state, page, activeSort.sort, activeSort.order],
+    queryFn: () => searchGitHubIssues(searchQuery, state, page, activeSort.sort, activeSort.order),
     enabled: hasSearched && !!searchQuery,
     placeholderData: (prev) => prev,
   });
@@ -375,6 +436,11 @@ export default function SearchPage() {
 
   const handleStateChange = (newState: "open" | "closed" | "all") => {
     setState(newState);
+    setPage(1);
+  };
+
+  const handleSortChange = (idx: number) => {
+    setSortIdx(idx);
     setPage(1);
   };
 
@@ -468,26 +534,33 @@ export default function SearchPage() {
 
       {/* Filters & results */}
       <div className="flex-1 max-w-4xl mx-auto w-full px-4 py-6">
-        {/* State toggle + result count */}
+        {/* State toggle + sort + result count */}
         {hasSearched && (
-          <div className="flex items-center justify-between mb-5">
-            <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
-              {(["open", "closed", "all"] as const).map((s) => (
-                <button
-                  key={s}
-                  onClick={() => handleStateChange(s)}
-                  className={`px-4 py-1.5 rounded-md text-xs font-medium transition-all capitalize ${
-                    state === s
-                      ? "bg-background text-foreground shadow-xs border border-border"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {s === "open" && <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5 align-middle" />}
-                  {s === "closed" && <span className="inline-block w-1.5 h-1.5 rounded-full bg-purple-500 mr-1.5 align-middle" />}
-                  {s}
-                </button>
-              ))}
+          <div className="flex items-center justify-between gap-3 mb-5 flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* State pills */}
+              <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
+                {(["open", "closed", "all"] as const).map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => handleStateChange(s)}
+                    className={`px-4 py-1.5 rounded-md text-xs font-medium transition-all capitalize ${
+                      state === s
+                        ? "bg-background text-foreground shadow-xs border border-border"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {s === "open" && <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5 align-middle" />}
+                    {s === "closed" && <span className="inline-block w-1.5 h-1.5 rounded-full bg-purple-500 mr-1.5 align-middle" />}
+                    {s}
+                  </button>
+                ))}
+              </div>
+
+              {/* Sort dropdown */}
+              <SortDropdown value={sortIdx} onChange={handleSortChange} />
             </div>
+
             {data && (
               <span className="text-xs text-muted-foreground">
                 {isFetching ? (

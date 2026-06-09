@@ -12,14 +12,16 @@ function githubHeaders(): Record<string, string> {
 }
 
 router.get("/github/search/issues", async (req, res) => {
-  const { q, per_page = "10", page = "1" } = req.query as Record<string, string>;
+  const { q, per_page = "10", page = "1", sort = "", order = "desc" } = req.query as Record<string, string>;
 
   if (!q) {
     res.status(400).json({ error: "Missing required query param: q" });
     return;
   }
 
-  const url = `https://api.github.com/search/issues?q=${encodeURIComponent(q)}&per_page=${per_page}&page=${page}`;
+  const urlParams = new URLSearchParams({ q, per_page, page, order });
+  if (sort) urlParams.set("sort", sort);
+  const url = `https://api.github.com/search/issues?${urlParams}`;
 
   try {
     const upstream = await fetch(url, { headers: githubHeaders() });
